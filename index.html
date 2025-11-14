@@ -1,1 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>언더워터 펠릿타이저 소음 분석</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            font-size: 24px;
+            color: #333;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #results {
+            margin-top: 20px;
+            text-align: left;
+        }
+        canvas {
+            margin-top: 20px;
+        }
+        .warning {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>언더워터 펠릿타이저 블레이드 마모 분석</h1>
+        <label for="rpm">RPM:</label>
+        <input type="number" id="rpm" placeholder="예: 1200" required>
+        <label for="blade_count">블레이드 개수:</label>
+        <input type="number" id="blade_count" placeholder="예: 6" required>
+        <button onclick="analyze()">분석</button>
+        <div id="results"></div>
+        <canvas id="freqChart"></canvas>
+    </div>
 
+    <script>
+        // 설정값
+        const AMPLITUDE_THRESHOLD = 0.5; // 진폭 임계값
+        const PRESSURE_MAX = 100; // 최대 압력
+        const K = 0.1; // 압력-진폭 선형 상수 (A = k*P)
+
+        function calculateFrequencies(rpm, bladeCount) {
+            const baseFreq = (rpm / 60) * bladeCount;
+            const defectFreq = 7 * baseFreq;
+            return { baseFreq, defectFreq };
+        }
+
+        function adjustPressure(amplitude, currentPressure) {
+            let warning = "";
+            let newPressure;
+            if (amplitude > AMPLITUDE_THRESHOLD) {
+                // 진폭이 크면 압력 감소
+                newPressure = currentPressure - (amplitude - AMPLITUDE_THRESHOLD) / K;
+            } else if (amplitude < AMPLITUDE_THRESHOLD * 0.5) {
+                // 진폭이 너무 낮으면 마모 경고
+                warning = "경고: 블레이드 마모 심각, 점검 필요!";
+                newPressure = currentPressure;
+            } else {
+                newPressure = currentPressure;
+            }
+            newPressure = Math.max(0, Math.min(newPressure, PRESSURE_MAX));
+            return { newPressure, warning };
+        }
+
+        function analyze() {
+            // 입력값 가져오기
+            const rpm = parseFloat(document.getElementById('rpm').value);
+            const bladeCount = parseInt(document.getElementById('blade_count').value);
+
+            if (isNaN(rpm) || isNaN(bladeCount) || rpm <= 0 || bladeCount <= 0) {
+                document.getElementById('results').innerHTML = '<p class="warning">유효한 RPM과 블레이드 개수를 입력하세요.</p>';
+                return;
+            }
+
+            // 주파수 계산
+            const { baseFreq, defectFreq } = calculateFrequencies(rpm, bladeCount);
+
+            // 더미 진폭 (실제로는 소음 분석 결과 사용)
+            const amplitude = 0.6; // 예시 값
+            const currentPressure = 80;
+            const { newPressure, warning } = adjustPressure(amplitude, currentPressure);
+
+            // 결과 표시
+            document.getElementById('results').innerHTML = `
+                <p><strong>RPM:</strong> ${rpm}</p>
+                <p><strong>기본 주파수:</strong> ${baseFreq.toFixed(2)} Hz</p>
+                <p><strong>결함 주파수:</strong> ${defectFreq.toFixed(2
